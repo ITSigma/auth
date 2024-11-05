@@ -31,8 +31,11 @@ namespace PhotosApp
             services.Configure<PhotosServiceOptions>(configuration.GetSection("PhotosService"));
 
             var mvc = services.AddControllersWithViews();
+            services.AddRazorPages();
             if (env.IsDevelopment())
+            {
                 mvc.AddRazorRuntimeCompilation();
+            }
 
             // NOTE: Подключение IHttpContextAccessor, чтобы можно было получать HttpContext там,
             // где это не получается сделать более явно.
@@ -77,9 +80,14 @@ namespace PhotosApp
             app.UseSerilogRequestLogging();
 
             app.UseRouting();
+            
+            app.UseAuthentication();
+            app.UseAuthorization();
+            
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapControllerRoute("default", "{controller=Photos}/{action=Index}/{id?}");
+                endpoints.MapRazorPages();
             });
         }
     }
