@@ -1,4 +1,6 @@
 using System;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI;
@@ -8,6 +10,8 @@ using Microsoft.Extensions.DependencyInjection;
 using PhotosApp.Areas.Identity.Data;
 using PhotosApp.Data;
 using PhotosApp.Services;
+using PhotosApp.Services.Authorization;
+using PhotosApp.Services.TicketStores;
 
 [assembly: HostingStartup(typeof(PhotosApp.Areas.Identity.IdentityHostingStartup))]
 namespace PhotosApp.Areas.Identity
@@ -20,11 +24,44 @@ namespace PhotosApp.Areas.Identity
                 services.AddDbContext<UsersDbContext>(options =>
                     options.UseSqlite(
                         context.Configuration.GetConnectionString("UsersDbContextConnection")));
+                
+                services.AddDbContext<TicketsDbContext>(options =>
+                    options.UseSqlite(
+                        context.Configuration.GetConnectionString("TicketsDbContextConnection")));
 
                 services.AddDefaultIdentity<PhotosAppUser>()
+                    .AddRoles<IdentityRole>()
+                    .AddClaimsPrincipalFactory<CustomClaimsPrincipalFactory>()
                     .AddPasswordValidator<UsernameAsPasswordValidator<PhotosAppUser>>()
                     .AddErrorDescriber<RussianIdentityErrorDescriber>()
                     .AddEntityFrameworkStores<UsersDbContext>();
+                
+                services.AddAuthorization(options =>
+                {
+                    options.AddPolicy(
+                        "Beta",
+                        policyBuilder =>
+                        {
+                            policyBuilder.RequireAuthenticatedUser();
+                            policyBuilder.RequireClaim("testing", "beta");
+                        });
+                    
+                    options.AddPolicy(
+                        "Paid",
+                        policyBuilder =>
+                        {
+                            policyBuilder.RequireAuthenticatedUser();
+                            policyBuilder.RequireClaim("subscription", "paid");
+                        });
+                    
+                    options.AddPolicy(
+                        "MustOwnPhoto",
+                        policyBuilder =>
+                        {
+                            policyBuilder.RequireAuthenticatedUser();
+                            policyBuilder.AddRequirements(new MustOwnPhotoRequirement());
+                        });
+                });
                 
                 services.Configure<IdentityOptions>(options =>
                 {
@@ -37,7 +74,22 @@ namespace PhotosApp.Areas.Identity
                     options.SignIn.RequireConfirmedAccount = false;
                 });
                 
+                services.AddTransient<EntityTicketStore>();
+                services.ConfigureApplicationCookie(options =>
+                {
+                    var serviceProvider = services.BuildServiceProvider();
+                    options.SessionStore = serviceProvider.GetRequiredService<EntityTicketStore>();
+                    options.AccessDeniedPath = "/Identity/Account/AccessDenied";
+                    options.Cookie.Name = "PhotosApp.Auth";
+                    options.Cookie.HttpOnly = true;
+                    options.ExpireTimeSpan = TimeSpan.FromMinutes(60);
+                    options.LoginPath = "/Identity/Account/Login";
+                    options.ReturnUrlParameter = CookieAuthenticationDefaults.ReturnUrlParameter;
+                    options.SlidingExpiration = true;
+                });
+                
                 services.AddScoped<IPasswordHasher<PhotosAppUser>, SimplePasswordHasher<PhotosAppUser>>();
+                services.AddScoped<IAuthorizationHandler, MustOwnPhotoHandler>();
             });
         }
     }

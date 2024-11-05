@@ -36,6 +36,7 @@ namespace PhotosApp.Controllers
             return View(model);
         }
 
+        [Authorize(Policy = "MustOwnPhoto")]
         public async Task<IActionResult> GetPhoto(Guid id)
         {
             var photoEntity = await photosRepository.GetPhotoMetaAsync(id);
@@ -48,6 +49,8 @@ namespace PhotosApp.Controllers
             return View(model);
         }
 
+        
+        [Authorize(Policy = "MustOwnPhoto")]
         [HttpGet("photos/{id}")]
         public async Task<IActionResult> GetPhotoFile(Guid id)
         {
@@ -58,13 +61,17 @@ namespace PhotosApp.Controllers
             return File(photoContent.Content, photoContent.ContentType, photoContent.FileName);
         }
 
+        
+        [Authorize(Policy = "Paid")]
         public IActionResult AddPhoto()
         {
             return View();
         }
 
+        
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Policy = "Paid")]
         public async Task<IActionResult> AddPhoto(AddPhotoModel addPhotoModel)
         {
             if (addPhotoModel == null || !ModelState.IsValid)
@@ -92,7 +99,10 @@ namespace PhotosApp.Controllers
 
             return RedirectToAction("Index");
         }
-
+        
+        
+        [Authorize(Policy = "MustOwnPhoto")]
+        [Authorize(Policy = "Beta")]
         public async Task<IActionResult> EditPhoto(Guid id)
         {
             var photo = await photosRepository.GetPhotoMetaAsync(id);
@@ -109,6 +119,8 @@ namespace PhotosApp.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Policy = "MustOwnPhoto")]
+        [Authorize(Policy = "Beta")]
         public async Task<IActionResult> EditPhoto(EditPhotoModel editPhotoModel)
         {
             if (editPhotoModel == null || !ModelState.IsValid)
@@ -125,7 +137,8 @@ namespace PhotosApp.Controllers
 
             return RedirectToAction("Index");
         }
-
+        
+        [Authorize(Policy = "MustOwnPhoto")]
         [HttpPost]
         public async Task<IActionResult> DeletePhoto(Guid id)
         {
