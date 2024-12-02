@@ -29,7 +29,7 @@ namespace PhotosApp
         public void ConfigureServices(IServiceCollection services)
         {
             services.Configure<PhotosServiceOptions>(configuration.GetSection("PhotosService"));
-
+            
             var mvc = services.AddControllersWithViews();
             services.AddRazorPages();
             if (env.IsDevelopment())
@@ -47,9 +47,10 @@ namespace PhotosApp
             // NOTE: Вместо Sqlite можно использовать LocalDB от Microsoft или другой SQL Server
             //services.AddDbContext<PhotosDbContext>(o =>
             //    o.UseSqlServer(@"Server=(localdb)\mssqllocaldb;Database=PhotosApp;Trusted_Connection=True;"));
-
-            services.AddScoped<IPhotosRepository, LocalPhotosRepository>();
-
+            
+            //services.AddScoped<IPhotosRepository, LocalPhotosRepository>();
+            services.AddScoped<IPhotosRepository, RemotePhotosRepository>();
+            
             services.AddAutoMapper(cfg =>
             {
                 cfg.CreateMap<PhotoEntity, PhotoDto>().ReverseMap();
