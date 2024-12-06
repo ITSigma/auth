@@ -25,10 +25,11 @@ namespace IdentityServer
             //services.AddControllersWithViews();
 
             var builder = services.AddIdentityServer()
-                .AddInMemoryIdentityResources(Config.Ids)
-                .AddInMemoryApiResources(Config.Apis)
-                .AddInMemoryApiScopes(Config.ApiScopes)
-                .AddInMemoryClients(Config.Clients);
+                    .AddInMemoryIdentityResources(Config.Ids)
+                    .AddInMemoryApiResources(Config.Apis)
+                    .AddInMemoryApiScopes(Config.ApiScopes)
+                    .AddInMemoryClients(Config.Clients)
+                    .AddTestUsers(TestUsers.Users); 
 
             // not recommended for production - you need to store your key material somewhere secure
             builder.AddDeveloperSigningCredential();

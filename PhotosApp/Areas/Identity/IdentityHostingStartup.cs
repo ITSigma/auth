@@ -39,11 +39,62 @@ namespace PhotosApp.Areas.Identity
                     .AddErrorDescriber<RussianIdentityErrorDescriber>()
                     .AddEntityFrameworkStores<UsersDbContext>();
 
+                services.ConfigureExternalCookie(options =>
+                {
+                    options.Cookie.Name = "PhotosApp.Auth.External";
+                    options.Cookie.HttpOnly = true;
+                    options.ExpireTimeSpan = TimeSpan.FromMinutes(5);
+                    options.SlidingExpiration = true;
+                });
+                
                 services.AddAuthentication()
-                    .AddGoogle("Google", options =>
+                    /*.AddGoogle("Google", options =>
                     {
                         options.ClientId = context.Configuration["Authentication:Google:ClientId"];
                         options.ClientSecret = context.Configuration["Authentication:Google:ClientSecret"];
+                    });*/
+                    .AddOpenIdConnect(
+                        authenticationScheme: "Google",
+                        displayName: "Google",
+                        options =>
+                        {
+                            //options.SaveTokens = true;
+                            options.Authority = "https://accounts.google.com/";
+                            options.ClientId = context.Configuration["Authentication:Google:ClientId"];
+                            options.ClientSecret = context.Configuration["Authentication:Google:ClientSecret"];
+
+                            options.CallbackPath = "/signin-google";
+                            options.SignedOutCallbackPath = "/signout-callback-google";
+                            options.RemoteSignOutPath = "/signout-google";
+
+                            options.Scope.Add("email");
+                        });
+                
+                services.AddAuthentication(o =>
+                {
+                    o.DefaultScheme = IdentityConstants.ApplicationScheme;
+                    o.DefaultSignInScheme = IdentityConstants.ExternalScheme;
+                });
+                
+                services.AddAuthentication()
+                    .AddOpenIdConnect("Passport", "Паспорт", options =>
+                    {
+                        options.Authority = "https://localhost:7001";
+
+                        options.ClientId = "Photos App by OIDC";
+                        options.ClientSecret = "secret";
+                        options.ResponseType = "code";
+
+                        // NOTE: oidc и profile уже добавлены по умолчанию
+                        options.Scope.Add("email");
+
+                        options.CallbackPath = "/signin-passport";
+
+                        // NOTE: все эти проверки токена выполняются по умолчанию, указаны для ознакомления
+                        options.TokenValidationParameters.ValidateIssuer = true; // проверка издателя
+                        options.TokenValidationParameters.ValidateAudience = true; // проверка получателя
+                        options.TokenValidationParameters.ValidateLifetime = true; // проверка не протух ли
+                        options.TokenValidationParameters.RequireSignedTokens = true; // есть ли валидная подпись издателя
                     });
                 
                 services.AddAuthentication()
@@ -90,10 +141,10 @@ namespace PhotosApp.Areas.Identity
                         policyBuilder =>
                         {
                             policyBuilder.RequireAuthenticatedUser();
-                            policyBuilder.RequireRole("Dev");
+                            /*policyBuilder.RequireRole("Dev");
                             policyBuilder.AddAuthenticationSchemes(
                                 JwtBearerDefaults.AuthenticationScheme,
-                                IdentityConstants.ApplicationScheme);
+                                IdentityConstants.ApplicationScheme);*/
                         });
                     
                     options.AddPolicy(
@@ -129,7 +180,7 @@ namespace PhotosApp.Areas.Identity
                 services.ConfigureApplicationCookie(options =>
                 {
                     var serviceProvider = services.BuildServiceProvider();
-                    options.SessionStore = serviceProvider.GetRequiredService<EntityTicketStore>();
+                    //options.SessionStore = serviceProvider.GetRequiredService<EntityTicketStore>();
                     options.AccessDeniedPath = "/Identity/Account/AccessDenied";
                     options.Cookie.Name = "PhotosApp.Auth";
                     options.Cookie.HttpOnly = true;
