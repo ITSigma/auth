@@ -5,9 +5,11 @@ using System.Linq;
 using System.Threading.Tasks;
 using AutoMapper;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Mvc;
 using PhotosService.Data;
 using PhotosService.Models;
+using PhotosService.Services;
 
 namespace PhotosService.Controllers
 {
@@ -60,6 +62,26 @@ namespace PhotosService.Controllers
                 return NotFound();
             if (accessToken.Subject != photoEntity.OwnerId)
                 return Forbid();
+            var photoContent = await photosRepository.GetPhotoContentAsync(id);
+            if (photoContent == null)
+                return NotFound();
+
+            return File(photoContent.Content, photoContent.ContentType, photoContent.FileName);
+        }
+
+        [AllowAnonymous]
+        [HttpGet("{id}/signed-content")]
+        public async Task<IActionResult> GetPhotoSignedContent(Guid id)
+        {
+            var currentUrl = HttpContext.Request.GetEncodedUrl();
+            var check = SignedUrlHelpers.CheckSignedUrl(currentUrl);
+            if (!check)
+                return Forbid();
+            
+            var photoEntity = await photosRepository.GetPhotoMetaAsync(id);
+            if (photoEntity == null)
+                return NotFound();
+
 
             var photoContent = await photosRepository.GetPhotoContentAsync(id);
             if (photoContent == null)
